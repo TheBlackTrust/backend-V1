@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # blacktrust
 backend development for blacktrust UI.
 # what is blacktrust?
@@ -13,3 +14,7 @@ to be published for public views.
 run the following
 git pull origin master
 
+=======
+# backend-V1
+Development of backend for version-1 of blacktrust
+>>>>>>> 098963f0e6dbd33d9bced77392ee7418d767bf6f
