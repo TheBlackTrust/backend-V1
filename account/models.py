@@ -41,6 +41,19 @@ class User(AbstractBaseUser, PermissionsMixin):
         ("user", "User"),
         ("guest", "Guest"),
     )
+
+    WHAT_BROUGHT_YOU = (
+      ("search engine", "Search engine"),
+      ("social media", "Social media"),
+      ("website referral", "Website referral"),
+      ("radio/tv", "Radio/TV"),
+      ("twitter space", "Twitter space"),
+      ("podcast", "Podcast"),
+      ("print", "Print"),
+      ("word of mouth", "Word of Mouth"),
+      ("others", "Others"),
+  )
+
     selected_categories = models.ManyToManyField(Category, blank=True, related_name='users')
     username = models.CharField(max_length=150, unique=True, blank=False, null=False)
     email = models.EmailField(unique=True, blank=False, null=False)
@@ -48,12 +61,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     role = models.CharField(max_length=20, choices=ROLES, default="guest")
     is_admin = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
-    why_here = models.CharField(max_length=400, default="", blank=False)
+    why_here = models.CharField(max_length=400, choices= WHAT_BROUGHT_YOU, blank=False)
     country = models.CharField(max_length=100, choices=CountryChoiceField().get_country_choices())
-
-    # country = CountryChoiceField(
-    #     max_length=100, choices=CountryChoiceField().get_country_choices()
-    # )
     is_active = models.BooleanField(default=True)
 
     birth_date = models.DateField(
