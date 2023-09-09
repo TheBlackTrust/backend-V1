@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Category Onboarding</title>
+</head>
+<body>
+    <h1>Category Onboarding</h1>
+    <div>
+        <h2>Select Categories</h2>
+        <button id="category1">Category 1</button>
+        <button id="category2">Category 2</button>
+        <button id="category3">Category 3</button>
+    </div>
+    <button id="finish">Finish</button>
+    <p id="message"></p>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const categoryButtons = document.querySelectorAll("button[id^='category']");
+            const finishButton = document.getElementById("finish");
+            const message = document.getElementById("message");
+
+            const selectedCategories = [];
+
+            categoryButtons.forEach(button => {
+                button.addEventListener("click", () => {
+                    if (selectedCategories.length < 3) {
+                        selectedCategories.push(button.textContent);
+                        button.disabled = true;
+                    }
+                });
+            });
+
+            finishButton.addEventListener("click", async () => {
+                if (selectedCategories.length === 3) {
+                    try {
+                        const response = await fetch("http://127.0.0.1:8000/api/v1/account/user/onboarding/", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                // Add authentication headers if required
+                            },
+                            body: JSON.stringify({ selected_categories: selectedCategories })
+                        });
+                        
+                        const data = await response.json();
+                        message.textContent = data.message;
+                        console.log(data)
+                    } catch (error) {
+                        console.error(error);
+                        message.textContent = "An error occurred while processing your request.";
+
+                    }
+                } else {
+                    message.textContent = "Please select exactly 3 categories.";
+                }
+            });
+        });
+    </script>
+</body>
+</html>
