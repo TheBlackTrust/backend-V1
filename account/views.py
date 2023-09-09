@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
 from django.http import HttpResponseServerError
 from .customauthorization import CookieJWTAuthentication
-from .utils import send_verification_email
+from .utils import send_verification_email, send_password_reset_verification_email
 from rest_framework.generics import RetrieveUpdateDestroyAPIView
 from rest_framework.generics import CreateAPIView
 from .models import Category, User
@@ -309,7 +309,7 @@ class PasswordResetView(generics.GenericAPIView):
         if user:
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
-            send_verification_email(email, uid, token)
+            send_password_reset_verification_email(email, uid, token)
         return Response(
             {"detail": "Password reset email has been sent."}, status=status.HTTP_200_OK
         )
