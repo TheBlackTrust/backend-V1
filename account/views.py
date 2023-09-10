@@ -56,9 +56,14 @@ class RegisterUserView(CreateAPIView):
             # Call the function to send the email verification link
             send_verification_email(user.email, uid, token)
 
-            return Response(
-                "Registration successful: Please check your email to activate your account and have a better experience with blacktrust"
-            )
+            # Serialize the user data
+            serialized_user = UserManagerSerializer(user).data
+
+            # Return a response with the serialized user data
+            return Response({
+                "message": "Registration successful: Please check your email to activate your account and have a better experience with blacktrust",
+                "user": serialized_user
+            })
 
         except ValidationError as e:
             # Handle validation errors and return them in the response
