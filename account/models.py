@@ -5,9 +5,8 @@ from django.db import models
 from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
-    PermissionsMixin,
+    # PermissionsMixin,
 )
-from django.utils import timezone
 from django.core.validators import FileExtensionValidator
 
 from django.utils.translation import gettext_lazy as _
@@ -16,25 +15,14 @@ from report.models import validate_image_size
 
 
 class Category(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=255, unique=True)
 
-class UserManager(BaseUserManager):
-    def create_user(self, username, email, password=None, **extra_fields):
-        if not email:
-            raise ValueError(_("The Email field must be set"))
-        email = self.normalize_email(email)
-        user = self.model(username=username, email=email, **extra_fields)
-        user.set_password(password)
-        user.save(using=self._db)
-        return user
-
-    def create_superuser(self, username, email, password=None, **extra_fields):
-        extra_fields.setdefault("is_staff", True)
-        extra_fields.setdefault("is_superuser", True)
-        return self.create_user(username, email, password, **extra_fields)
+    def __str__(self):
+        return self.name
 
 
-class User(AbstractBaseUser, PermissionsMixin):
+
+class User(AbstractBaseUser):
     ROLES = (
         ("admin", "Admin"),
         ("contributor", "Contributor"),
@@ -54,7 +42,7 @@ class User(AbstractBaseUser, PermissionsMixin):
       ("others", "Others"),
   )
 
-    selected_categories = models.ManyToManyField(Category, blank=True, related_name='users')
+    selected_categories = models.ManyToManyField(Category, blank= True, related_name='users')
     username = models.CharField(max_length=150, unique=True, blank=False, null=False)
     email = models.EmailField(unique=True, blank=False, null=False)
     password = models.CharField(max_length=128)
@@ -63,7 +51,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     why_here = models.CharField(max_length=400, choices= WHAT_BROUGHT_YOU, blank=False)
     country = models.CharField(max_length=100, choices=CountryChoiceField().get_country_choices())
-    is_active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=False)
 
     birth_date = models.DateField(
         blank=False, null=False, default=datetime.date(1900, 1, 1)
@@ -73,7 +61,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         upload_to="profile_pics/", blank=True, null=True,
         validators=[FileExtensionValidator(["jpg", "jpeg", "png"]), validate_image_size]
     )
-    objects = UserManager()
 
 
     USERNAME_FIELD = "username"

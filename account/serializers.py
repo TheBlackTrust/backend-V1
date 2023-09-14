@@ -8,16 +8,13 @@ from account.countryapi import CountryChoiceField
 from .utils import send_verification_email
 from .models import Category, User
 
-
-class CategorySelectionSerializer(serializers.Serializer):
-    selected_categories = serializers.ListField(child=serializers.PrimaryKeyRelatedField(queryset=Category.objects.all()), min_length=1, max_length=3)
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = '__all__'
 
 class UserManagerSerializer(serializers.ModelSerializer):
-    # country = CountryChoiceField()  # Use the API to fetch countries
-    # confirm_password = serializers.CharField(write_only=True, required=True)
-
-    selected_categories = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(), many=True, required=False)
-
+    selected_categories = CategorySerializer(many=True, read_only=True)
 
     class Meta:
         model = User
@@ -31,7 +28,9 @@ class UserManagerSerializer(serializers.ModelSerializer):
             "selected_categories",
             "country",
             "is_active",
+            "is_staff",
             "birth_date",
+            "profile_picture",
             "why_here",
         ]
         extra_kwargs = {
@@ -39,8 +38,6 @@ class UserManagerSerializer(serializers.ModelSerializer):
             "password": {"write_only": True},
             "email": {"validators": [UniqueValidator(queryset=User.objects.all())]},
         }
-
-
 
     def validate_birth_date(self, value):
         current_date = date.today()
@@ -50,39 +47,18 @@ class UserManagerSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(self.error_messages['birth_date']['too_young'])
         return value
 
-
-    # def validate_birth_date(self, value):
-    #     current_date = date.today()
-    #     age_limit_date = current_date - timedelta(days=18 * 365)  # 18 years * 365 days
-
-    #     if value > age_limit_date or value == date(1900, 1, 1):
-    #         raise serializers.ValidationError("You must be 18 years or older.")
-    #     return value
-
     def create(self, validated_data):
-        selected_categories = validated_data.pop('selected_categories', [])
+        selected_categories_data = validated_data.pop('selected_categories', [])
         password = validated_data.pop("password")
-        # confirm_password = validated_data.pop("confirm_password")
-
-        # if password != confirm_password:
-        #     raise serializers.ValidationError("Passwords must match.")
 
         #hashing the password before saving
         user = User(**validated_data)
         user.set_password(password)
         user.save()
-        user.selected_categories.set(selected_categories)
 
-        # Send email verification to the user
-        # user.is_active = False
-        # user.save()
-
-        # # Generate email verification token
-        # token = default_token_generator.make_token(user)
-        # uid = urlsafe_base64_encode(force_bytes(user.pk))
-
-        # # Call the function to send the email verification link
-        # send_verification_email(user.email, uid, token)
+        for category_data in selected_categories_data:
+            category, _ = Category.objects.get_or_create(name=category_data['name'])
+            user.selected_categories.add(category)
         return user
 
 
@@ -107,7 +83,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         instance.email = validated_data.get("email", instance.email)
         instance.why_here = validated_data.get("why_here", instance.why_here)
         instance.profile_picture = validated_data.get(
-            "profile_picture", instance.why_here
+            "profile_picture", instance.profile_picture
         )
         instance.save()
         return instance

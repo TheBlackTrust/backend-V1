@@ -1,19 +1,18 @@
 
-import jwt
-from requests import Response
-from rest_framework.authentication import BaseAuthentication
-from rest_framework.exceptions import AuthenticationFailed
 from .models import User
+import jwt
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.authentication import BaseAuthentication
+# from django.contrib.auth.models import User  # Assuming you are using Django's User model
 
-
-
-class CookieJWTAuthentication(BaseAuthentication):
+class HeaderJWTAuthentication(BaseAuthentication):
     def authenticate(self, request):
-        token = request.COOKIES.get("jwt")
+        token = request.META.get("HTTP_AUTHORIZATION")  # Get the token from the Authorization header
 
-        if not token:
+        if not token or not token.startswith("Bearer "):
+            return None  # No token found, return None to indicate no authentication
 
-            raise AuthenticationFailed("You are not logged in.")
+        token = token.split(" ")[1]  # Extract the token from "Bearer <token>"
 
         try:
             # Verify and decode the token using your secret key
@@ -26,6 +25,4 @@ class CookieJWTAuthentication(BaseAuthentication):
         except jwt.ExpiredSignatureError:
             raise AuthenticationFailed("Token has expired. Please log in again.")
         except (jwt.DecodeError, User.DoesNotExist):
-            raise AuthenticationFailed(
-                "You are not logged in."
-            )
+            raise AuthenticationFailed("Invalid credentials")

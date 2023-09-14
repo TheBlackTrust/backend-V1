@@ -13,17 +13,17 @@ from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
 from django.http import HttpResponseServerError
-from .customauthorization import CookieJWTAuthentication
+from .customauthorization import HeaderJWTAuthentication
 from .utils import send_verification_email, send_password_reset_verification_email
 from rest_framework.generics import RetrieveUpdateDestroyAPIView
 from rest_framework.generics import CreateAPIView
 from .models import Category, User
 from .serializers import (
-    CategorySelectionSerializer,
     UserManagerSerializer,
     PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer,
     UserProfileSerializer,
+    CategorySerializer
 )
 from django.utils.encoding import force_bytes, force_str
 from .customexceptionhandle import AuthenticationFailed, RegistrationFailed
@@ -32,8 +32,6 @@ import logging
 from django.conf import settings
 import jwt, datetime
 
-# User = get_user_model()
-# logging.basicConfig(filename="email_errors.log", level=logging.ERROR)
 
 
 class RegisterUserView(CreateAPIView):
@@ -74,6 +72,8 @@ class RegisterUserView(CreateAPIView):
             raise RegistrationFailed(str(e))
 
 
+
+
 class ObtainJWTView(APIView):
     authentication_classes = []
 
@@ -102,42 +102,38 @@ class ObtainJWTView(APIView):
         # Encode the JWT token using your secret key from Django settings
         token = jwt.encode(payload, "secret", algorithm="HS256")
 
-        response = Response({"jwt": token})
+        return Response({"jwt": token})
 
-        # Set the JWT token as a cookie
-        response.set_cookie(key="jwt", value=token, httponly=True)
 
-        return response
-        # return render(request, "index.html")
 
 
 class OnboardingView(APIView):
     permission_classes = [CustomIsAuthenticated]
-    authentication_classes = [CookieJWTAuthentication]
+    authentication_classes = [HeaderJWTAuthentication]
 
     def post(self, request, *args, **kwargs):
-        user = request.user
+        # Deserialize the request data using CategorySerializer
+        serializer = CategorySerializer(data=request.data, many=True)
 
-        serializer = CategorySelectionSerializer(data=request.data)
         if serializer.is_valid():
-            selected_category_ids = serializer.validated_data.get("selected_categories")
-
-            if len(selected_category_ids) > 3:
+            # Check if at least 3 categories are provided
+            if len(serializer.validated_data) >= 3:
+                # Save the categories
+                serializer.save()
                 return Response(
-                    {"detail": "You can only select up to 3 categories."},
-                    status=status.HTTP_400_BAD_REQUEST,
+                    {"message": "Categories saved successfully."},
+                    status=status.HTTP_201_CREATED
                 )
-
-            selected_categories = Category.objects.filter(id__in=selected_category_ids)
-
-            user.selected_categories.set(selected_categories)
-
+            else:
+                return Response(
+                    {"error": "At least 3 categories are required."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
             return Response(
-                {"message": "Categories selected successfully."},
-                status=status.HTTP_200_OK,
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
             )
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class LogoutView(APIView):
@@ -153,7 +149,7 @@ class UserProfileView(RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()
     serializer_class = UserProfileSerializer
     permission_classes = [CustomIsAuthenticated]
-    authentication_classes = [CookieJWTAuthentication]
+    authentication_classes = [HeaderJWTAuthentication]
 
     def get_object(self):
         return self.request.user
@@ -161,7 +157,7 @@ class UserProfileView(RetrieveUpdateDestroyAPIView):
 
 class UpdateUserProfileView(APIView):
     permission_classes = [CustomIsAuthenticated]
-    authentication_classes = [CookieJWTAuthentication]
+    authentication_classes = [HeaderJWTAuthentication]
 
     def put(self, request, *args, **kwargs):
         user = request.user
@@ -179,7 +175,7 @@ class UpdateUserProfileView(APIView):
 
 class DeleteUserProfileView(APIView):
     permission_classes = [CustomIsAuthenticated]
-    authentication_classes = [CookieJWTAuthentication]
+    authentication_classes = [HeaderJWTAuthentication]
 
     def delete(self, request, *args, **kwargs):
         user = request.user
@@ -192,7 +188,7 @@ class DeleteUserProfileView(APIView):
 
 @api_view(["GET"])
 @permission_classes([CustomIsAuthenticated])
-@authentication_classes([CookieJWTAuthentication])
+@authentication_classes([HeaderJWTAuthentication])
 def get_all_users(request):
     if not request.user.is_active:
         return Response(
@@ -209,9 +205,10 @@ def get_all_users(request):
         raise PermissionDenied("You do not have permission to access this resource.")
 
 
+
 @api_view(["GET"])
 @permission_classes([CustomIsAuthenticated])
-@authentication_classes([CookieJWTAuthentication])
+@authentication_classes([HeaderJWTAuthentication])
 def get_user_by_id(request, user_id):
     try:
         if not request.user.is_active:
@@ -221,7 +218,7 @@ def get_user_by_id(request, user_id):
                 },
                 status=status.HTTP_403_FORBIDDEN,
             )
-        elif request.user.is_staff:
+        elif request.user.is_staff or request.user.id == int(user_id):
             user = User.objects.get(pk=user_id)
             serializer = UserManagerSerializer(user)
             return Response({"user-info": serializer.data}, status=status.HTTP_200_OK)
@@ -234,16 +231,47 @@ def get_user_by_id(request, user_id):
         return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
+# @api_view(["GET"])
+# @permission_classes([CustomIsAuthenticated])
+# @authentication_classes([HeaderJWTAuthentication])
+# def get_user_by_id(request, user_id):
+
+
+#     #     try:
+#     #     user = User.objects.get(pk=user_id)
+#     # except User.DoesNotExist:
+#     #     return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+#     try:
+#         if not request.user.is_active:
+#             return Response(
+#                 {
+#                     "message": "Please activate your account with the email sent to you to continue with this resource"
+#                 },
+#                 status=status.HTTP_403_FORBIDDEN,
+#             )
+#         elif request.user.is_staff:
+#             user = User.objects.get(pk=user_id)
+#             serializer = UserManagerSerializer(user)
+#             return Response({"user-info": serializer.data}, status=status.HTTP_200_OK)
+#         else:
+#             return Response(
+#                 {"message": "You do not have permission to access this resource."},
+#                 status=status.HTTP_403_FORBIDDEN,
+#             )
+#     except User.DoesNotExist:
+#         return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
 @api_view(["PUT"])
 @permission_classes([CustomIsAuthenticated])
-@authentication_classes([CookieJWTAuthentication])
+@authentication_classes([HeaderJWTAuthentication])
 def update_user(request, user_id):
     try:
         user = User.objects.get(pk=user_id)
     except User.DoesNotExist:
         return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    if request.user.is_staff:
+    if request.user.is_staff or request.user.id == int(user_id):
         serializer = UserManagerSerializer(user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -258,8 +286,10 @@ def update_user(request, user_id):
 
 @api_view(["DELETE"])
 @permission_classes([CustomIsAuthenticated])
-@authentication_classes([CookieJWTAuthentication])
+@authentication_classes([HeaderJWTAuthentication])
 def delete_user(request, user_id):
+
+
     try:
         user = User.objects.get(pk=user_id)
     except User.DoesNotExist:

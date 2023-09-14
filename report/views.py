@@ -3,7 +3,7 @@ from rest_framework import generics, permissions, status
 
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
-from account.customauthorization import CookieJWTAuthentication
+from account.customauthorization import HeaderJWTAuthentication
 from account.permissions import CustomIsAuthenticated
 from .models import ReportAScam, ScamStory
 from .serializers import ReportAScamSerializer, ScamStorySerializer
@@ -13,7 +13,7 @@ class ReportAScamView(generics.ListCreateAPIView):
     queryset = ReportAScam.objects.all()
     serializer_class = ReportAScamSerializer
     permission_classes = [CustomIsAuthenticated]
-    authentication_classes = [CookieJWTAuthentication]
+    authentication_classes = [HeaderJWTAuthentication]
 
     def get_queryset(self):
         user = self.request.user
@@ -51,7 +51,7 @@ class ReportAScamDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = ReportAScam.objects.all()
     serializer_class = ReportAScamSerializer
     permission_classes = [CustomIsAuthenticated]
-    authentication_classes = [CookieJWTAuthentication]
+    authentication_classes = [HeaderJWTAuthentication]
 
     def get_object(self):
         obj = get_object_or_404(self.queryset, pk=self.kwargs["pk"])
@@ -96,7 +96,7 @@ class ScamStoryView(generics.ListCreateAPIView):
     queryset = ScamStory.objects.all()
     serializer_class = ScamStorySerializer
     permission_classes = [CustomIsAuthenticated]
-    authentication_classes = [CookieJWTAuthentication]
+    authentication_classes = [HeaderJWTAuthentication]
 
     def get_queryset(self):
         user = self.request.user
@@ -136,7 +136,7 @@ class ScamStoryDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = ScamStory.objects.all()
     serializer_class = ScamStorySerializer
     permission_classes = [CustomIsAuthenticated]
-    authentication_classes = [CookieJWTAuthentication]
+    authentication_classes = [HeaderJWTAuthentication]
 
     def get_object(self):
         # Override get_object to ensure non-staff users can only retrieve their own reports
@@ -177,44 +177,3 @@ class ScamStoryDetailView(generics.RetrieveUpdateDestroyAPIView):
         )
         
 
-
-
-"""
-
-# class ScamStoryView(generics.ListCreateAPIView):
-#     queryset = ScamStory.objects.all()
-#     serializer_class = ScamStorySerializer
-#     permission_classes = [permissions.IsAuthenticated]
-
-#     def get_queryset(self):
-#         user = self.request.user
-#         if user.is_staff or user.is_superuser:
-#             return ScamStory.objects.all()
-#         else:
-#             return ScamStory.objects.filter(user=user)
-
-#     def list(self, request, *args, **kwargs):
-#         queryset = self.get_queryset()
-#         serializer = self.get_serializer(queryset, many=True)
-#         # Convert the serialized data to a dictionary and exclude non-serializable fields
-#         data = [dict(item) for item in serializer.data]
-#         return JsonResponse(data, safe=False)
-
-
-# # Story detail view for all users
-# class ScamStoryDetailView(generics.RetrieveUpdateDestroyAPIView):
-#     queryset = ScamStory.objects.all()
-#     serializer_class = ScamStorySerializer
-#     permission_classes = [permissions.IsAuthenticated]
-
-#     def get_object(self):
-#         # Override get_object to ensure non-staff users can only retrieve their own stories
-
-#          # obj = super().get_object()
-#         obj = get_object_or_404(self.queryset, pk=self.kwargs["pk"])
-#         user = self.request.user
-#         if not (user.is_staff or user.is_superuser) and obj.user != user:
-#             self.permission_denied(self.request)
-#         return obj
-
-"""

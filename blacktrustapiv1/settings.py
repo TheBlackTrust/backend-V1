@@ -23,8 +23,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY')
-
 
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
@@ -34,7 +32,8 @@ ALLOWED_HOSTS = ["*" ]
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # Add the origin of your frontend application
-    "https://yourfrontenddomain.com",  # Add your production frontend domain
+    "http://localhost:3001",  # Add the origin of your frontend application
+    "https://frontenddomain.com",  # Add your production frontend domain
 ]
 
 
@@ -89,7 +88,8 @@ TEMPLATES = [
 WSGI_APPLICATION = 'blacktrustapiv1.wsgi.application'
 
 # setting custom User Model
-AUTH_USER_MODEL = "account.User"
+AUTH_USER_MODEL = 'auth.User'
+
 
 
 # Database
@@ -133,8 +133,11 @@ USE_I18N = True
 
 USE_TZ = True
 
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True  # If needed for your use case
+
+SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_HTTPONLY = True
+
+
 
 
 JWT_EXPIRATION_DELTA = timedelta(minutes=60)
@@ -154,11 +157,11 @@ EMAIL_HOST_USER = config("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
-EMAIL_PORT = 465 
+EMAIL_PORT = 465
 EMAIL_USE_SSL = True
 
 
-FRONTEND_BASE_URL = "http://localhost:3000"  # Replace this with the actual URL of your frontend application
+FRONTEND_BASE_URL = "http://localhost:3001"  # Replace this with the actual URL of your frontend application
 # FRONTEND_BASE_URL = ("http://127.0.0.1:8000",)
 # Replace this with the actual URL of your frontend application
 
